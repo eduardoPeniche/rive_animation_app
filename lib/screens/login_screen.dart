@@ -26,6 +26,59 @@ class _LoginScreenState extends State<LoginScreen> {
   //4.2 Variable para temporizador
   Timer? _typingDebounce;
 
+  //5.1 Controllers para manipular el texto escrito por el usuario
+  final _emailController = TextEditingController();
+  final _passController = TextEditingController();
+
+  //Errores para mostrar en la UI
+  String? emailError;
+  String? passwordError;
+
+  //5.3 Validadores
+  bool isValidEmail(String email) {
+    final regularExp = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    return regularExp.hasMatch(email);
+  }
+
+  bool isValidPassword(String pass) {
+    final regularExp = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$');
+    return regularExp.hasMatch(pass);
+  }
+
+  //5.4 Accion al boton
+  void _onLogin() {
+    // quitar los espacios al inicio y final del texto
+    final email = _emailController.text.trim();
+    final password = _passController.text.trim();
+
+    // recalcular errores
+    final emailMsgError = isValidEmail(email) ? null : 'Email inválido';
+    final passMsgError = isValidPassword(password) ? null :
+      '8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 caracter especial';
+
+    //5.5 Notificar cambios en la UI
+    setState(() {
+      emailError = emailMsgError;
+      passwordError = passMsgError;
+    });
+
+    //5.6 Cerrar el teclado y bajar manos
+    FocusScope.of(context).unfocus();
+    _typingDebounce?.cancel();
+    _isChecking?.change(false);
+    _isHandsUp?.change(false);
+    _numLook?.value = 50.0;
+
+    //5.7 Activar trigger 
+    bool isValid = emailMsgError == null && passMsgError == null;
+    if (isValid) {
+      _trigSuccess?.fire();
+    } else {
+      _trigFail?.fire();
+    }
+  }
+
+
   //2.1 Crear variables para focusNode
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
@@ -92,6 +145,8 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 10),
             // Campo de texto para email
             TextField(
+              //5.8 Enlazar controller
+              controller: _emailController,
               focusNode: _emailFocusNode,
               // 1.3 Vincular SMIs a inputs de UI
               onChanged: (value) {
@@ -122,6 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
+                //5.9 Mostrar error en la UI
+                errorText: emailError,
                 hintText: 'Email',
                 prefixIcon: const Icon(Icons.email),
                 border: OutlineInputBorder(
@@ -132,6 +189,8 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 10),
             // Campo de texto para contraseña
             TextField(
+              //5.8 Enlazar controller
+              controller: _passController,
               focusNode: _passwordFocusNode,
               onChanged: (value) {
                 if (_isChecking != null) {
@@ -144,6 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               obscureText: _obscureText,
               decoration: InputDecoration(
+                //5.9 Mostrar error en la UI
+                errorText: passwordError,
                 hintText: 'Password',
                 prefixIcon: const Icon(Icons.lock),
                 suffixIcon: IconButton(
@@ -161,6 +222,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            SizedBox(height: 10),
+            MaterialButton(
+              minWidth: size.width,
+              height: 50,
+
+              onPressed: _onLogin,
+              color: Colors.blueAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+
+              textColor: Colors.white,
+              child: const Text('Login', style: TextStyle(color: Colors.white, fontSize: 18)),
+
+
+            )
             ]
           ),
         )
@@ -171,7 +248,10 @@ class _LoginScreenState extends State<LoginScreen> {
   //2.4 Liberar recursos de memoria
   @override
   void dispose() {
+    // 5.10 Liberar controllers
     super.dispose();
+    _emailController.dispose();
+    _passController.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _typingDebounce?.cancel(); //4.4 Cancelar temporizador
